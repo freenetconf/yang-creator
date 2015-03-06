@@ -1,0 +1,38 @@
+{
+	"name": "yanger",
+	"version": "0.9.0",
+	"description": "Yang Creator UI written using HTML5 and nodejs",
+	"main": "server.js",
+	"scripts": {
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/freenetconf/yanger"
+	},
+	"keywords": [
+		"YANG",
+		"NETCONF",
+		"Editor"
+	],
+	"author": {
+		"name": "Petar Koretic",
+		"email": "petar.koretic@sartura.hr"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/freenetconf/yanger/issues"
+	},
+	"homepage": "https://github.com/freenetconf/yanger",
+	"dependencies": {
+		"express" : ">= 4.x",
+		"body-parser" : ">= 1.x",
+		"level" : ">= 0.18.x",
+		"node-minify" : ">= 1.0.x",
+		"compression" : ">= 1.2.x",
+		"multer" : ">= 0.1.x",
+		"yang-parser" : ">= 0.1.x",
+		"validator" : "latest",
+		"rimraf" : "latest",
+		"adm-zip": "latest"
+	}
+}

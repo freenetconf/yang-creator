@@ -1,0 +1,228 @@
+/* Eric Meyer's Reset CSS v2.0 - http://cssreset.com */
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td,article,aside,canvas,details,embed,figure,figcaption,footer,header,hgroup,menu,nav,output,ruby,section,summary,time,mark,audio,video{border:0;font-size:100%;vertical-align:baseline;margin:0;padding:0}article,aside,details,figcaption,figure,footer,header,hgroup,menu,nav,section{display:block}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:none}table{border-collapse:collapse;border-spacing:0}
+
+body, html {
+	font-family:arial;
+}
+
+#d_welcome, #f_login {
+	display:none
+}
+
+#a_logout {
+margin-left: 18px;
+}
+
+#d_content {
+	padding : 0% 2%;
+	font-size: 0.9em
+}
+
+.modal-content{
+	padding: 5% 10%
+}
+
+.modal-footer {
+	display: inline-flex;
+}
+
+table.files {
+	width:100%
+}
+
+table.files th, td {
+	padding: 1% 2%;
+}
+
+p {
+	padding:0;
+	margin:0
+}
+ul {
+	list-style-type:none;
+	margin-bottom: 1em;
+	margin-left:1em
+}
+
+.completion input[type=text] {
+	margin-left:1em;
+	font-size:1em;
+	font-weight:normal;
+	margin-bottom:1em;
+}
+
+.completion a.close {
+	margin-left:1em;
+	margin-bottom:1em;
+}
+
+h4 {
+	font-weight:bold;
+}
+
+li {
+	margin:0px;
+	padding:0px
+}
+
+span.identifier {
+	font-weight:bold
+}
+
+span.name {
+	color:black
+}
+
+span.property {
+	color:grey
+}
+
+.small {
+	font-size: 0.8em
+}
+
+.editable {
+	padding : 0.05em 0.3em;
+	border: 1px solid #EEEEEE;
+	display:inline-block;
+}
+
+a.add, a.delete{
+	font-weight:bold;
+	font-size:2.0em;
+	vertical-align: -10%;
+	text-decoration: none;
+}
+
+a.add {
+	font-size: 1.0em
+
+}
+
+.completion {
+	background-color : #EFEFEF
+}
+
+#d_editor {
+	width: 50%;
+	float:left
+}
+#d_output {
+	border: 1px solid #EFEFEF;
+	float:left;
+	width:48%;
+	margin: 0% 1%;
+	padding: 1%;
+}
+
+#i_spinner {
+	visibility:hidden
+}
+
+.modal .modal-body {
+	max-height: 430px;
+	overflow-y: scroll;
+}
+
+.modal-header {
+	border-bottom: none;
+}
+
+.modal-footer {
+	border-top: none;
+}
+
+button.btn.btn-info.btn-xs {
+	margin-right: 0%;
+}
+
+
+.btn-file {
+	position: relative;
+	overflow: hidden;
+}
+
+.btn-file input[type=file] {
+	position: absolute;
+	top: 0;
+	right: 0;
+	min-width: 100%;
+	min-height: 100%;
+	font-size: 100px;
+	text-align: right;
+	filter: alpha(opacity=0);
+	opacity: 0;
+	background: red;
+	cursor: inherit;
+	display: block;
+}
+
+input[readonly] {
+	cursor: text !important;
+}
+
+.input-xs {
+	height: 22px;
+	padding: 5px 5px;
+	font-size: 12px;
+	line-height: 1.5;
+	border-radius: 3px;
+}
+
+pre{
+	font-family: "Courier New", Courier, monospace, sans-serif;
+	background:#EFEFEF;
+	padding:15px
+}
+
+/* csDefault */
+/* Notification holder */
+.csInfoDiv {display:none;z-index:10000; position:fixed; top:0; width:100%; left:0; text-align:center;padding:0; margin:0}
+
+/* Notification inner holder - holds generated text/html */
+#csInfoInner {margin:0;display:inline-block;font-weight:bold; border-radius:0 0 3px 3px;padding:5px 15px;}
+
+footer {
+	position:fixed;
+	bottom:0;
+	right:0;
+}
+
+.logo {
+	padding:10px;
+}
+
+.navbar-form {
+	width: auto;
+	padding-top: 11px;
+	padding-bottom: 0;
+	margin-right: 0;
+	margin-left: 0;
+	border: 0;
+	-webkit-box-shadow: none;
+	box-shadow: none;
+}
+
+#form_download{
+	display: inline;
+}
+
+.glyphicon-trash {
+	margin-right: 4px;
+}
+
+.glyphicon-download {
+	margin-right: 4px;
+}
+
+#download {
+	margin-right: 0px;
+}
+
+#i_confirm_reset {
+	margin-left: 5px;
+}
+
+#i_reset_button {
+	margin-left: 5px;
+}
