@@ -27,11 +27,7 @@ var logging = function (action, user) {
 
 var app = express()
 app.use(compress())
-app.use(multer({
-	rename: function(filedname, filename) {
-		return filename
-	}
-}))
+app.use(multer())
 app.use(bodyParser.urlencoded({
 	extended: false
 }))

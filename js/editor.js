@@ -89,7 +89,7 @@ $("#d_options").on("click", "#a_files", function() {
 				'</form>'
 
 			var f = x + '<button id="i_reset_button" class="btn btn-danger btn-xs">' +
-				'<span class="glyphicon glyphicon-trash"></span>Reset YANG model</button>'
+				'<span class="glyphicon glyphicon-trash"></span>Reset YANG database</button>'
 
 			h += "</table>"
 
@@ -181,7 +181,7 @@ $("#d_options").on("click", "#a_files", function() {
 
 			$('#i_reset_button').on('click', function() {
 				var warning = '<div id="reset_warning">This action will remove all your YANG models \
-				and restore to default.This action can not be reverted.Are you sure?</div>'
+				and restore to default. This action can not be reverted. Are you sure?</div>'
 				var link = "/backup/" + user_data.email + "/" + user_data.pass
 
 				var x = '<form id="form_download" method="get" action="' + link + '">' +
@@ -189,14 +189,14 @@ $("#d_options").on("click", "#a_files", function() {
 					'<span class="glyphicon glyphicon-download"></span>Download</button>' +
 					'</form>' +
 					'<button id="i_confirm_reset" class="btn btn-danger btn-xs">' +
-					'<span class="glyphicon glyphicon-trash"></span>Reset YANG models</button>'
+					'<span class="glyphicon glyphicon-trash"></span>Reset YANG database</button>'
 
 
 				$w = $(warning)
 				$x = $(x)
 					//$f = $(f)
 
-				show_modal("Reset YANG models database", $w, $x)
+				show_modal("Reset YANG database", $w, $x)
 				document.getElementById("reset_warning").parentNode.style['overflow-y'] = 'auto'
 
 				$('#i_confirm_reset').on('click', function() {
@@ -278,9 +278,11 @@ $("#d_options").on("click", "#a_validate", function() {
 
 	var $d_validation = $("#d_validation")
 
-	$d_validation.html(spinner)
+	$d_validation.html("")
+	loading(1)
 	generate_yang(user_data, function(response) {
 		$d_validation.html(response.error ? response.error : "YANG module is valid.")
+		loading(0)
 	})
 
 	return false
@@ -316,6 +318,10 @@ $("#d_options").on('click', '#a_export', function(e) {
 		)
 
 		show_modal(yang_module_name, '<pre>' + response.yang + '</pre>', h)
+
+		$('#d_modal').on('hidden.bs.modal', function() {
+			loading(0)
+		})
 
 		var clipboard = new ZeroClipboard($("#bt_copy_to_clipboard"))
 
@@ -415,7 +421,7 @@ $("#d_options").on("click", "#bt_import", function() {
 
 				$("#d_editor").html(create_dom_statement(yang_root))
 
-				show_success("imported")
+				show_success("YANG model is imported")
 			} catch (e) {
 				return show_alert(e)
 			}
@@ -629,8 +635,6 @@ $("#d_editor").on("blur", "[contenteditable]", function() {
  */
 
 function generate_yang(user_data, callback, output) {
-	loading(0)
-
 	if (!callback)
 		return console.error("generate yang: no callback")
 
