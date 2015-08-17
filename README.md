@@ -4,8 +4,8 @@ YANG Creator
 The online YANG creator, editor, and exporter.
 
 #### Installation
-    git clone https://github.com/freenetconf/yanger.git
-    cd yanger
+    git clone https://github.com/freenetconf/yang-creator.git
+    cd yang-creator
 	export PYTHON=python2 # in case you python is in fact python3
     npm install
 
@@ -41,7 +41,7 @@ Save your yang files online for later usage.
   * uniq values should be set for all statements that can hold only one specific statement inside
   * default values and possible values - some statements can only have specific values
   * extension statements - dynamically created statements are not supported
-* help: create help window for users where they can see how to use yanger
+* help: create help window for users where they can see how to use YANG Creator
 * import/include: yang extension statements defined in other modules are not seen
 * import: depends on yang parser work
 * security, code cleanup and consolidation

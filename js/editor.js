@@ -870,7 +870,7 @@ function create_statement(statement) {
 	yang_root.add("description", "example yang module")
 	yang_root.add("contact", "support@freenetconf.org")
 	var e = yang_root.add("revision", new Date().toISOString().slice(0, 10))
-	e.add("reference", "https://github.com/freenetconf/yanger")
+	e.add("reference", "https://github.com/freenetconf/yang-creator")
 
 	e = yang_root.add("container", "example")
 	e.add("config", true)
