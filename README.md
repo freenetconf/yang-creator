@@ -11,6 +11,10 @@ The online YANG creator, editor, and exporter.
 
     ./server.js
 
+You also need to have `pyang` installed for export to work. E.g.:
+
+    pip2 install pyang
+
 #### Usage
 Open browser url 'http://127.0.0.1:8888'
 
