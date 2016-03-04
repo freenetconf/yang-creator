@@ -18,6 +18,7 @@ var exec = require('child_process').execFile
 var compressor = require('node-minify')
 var compress = require('compression')
 var multer = require('multer')
+var upload = multer({dest: './uploads/'})
 
 var yang_parser = require('yang-parser')
 
@@ -27,7 +28,6 @@ var logging = function (action, user) {
 
 var app = express()
 app.use(compress())
-app.use(multer())
 app.use(bodyParser.urlencoded({
 	extended: false
 }))
@@ -482,11 +482,11 @@ app.get("/file/:email/:userpass_hash/:yang_module_name?", function(req, res) {
  * upload yang file
  */
 
-app.post("/file/", function(req, res) {
+app.post("/file/", upload.single('import_file'), function(req, res) {
 	logging('uploading yang model')
 
-	var file = req.files.import_file
-	if (file.extension !== 'yang')
+	var file = req.file
+	if (file.mimetype !== 'application/yang')
 		return response(res, 'invalid file')
 
 	fs.readFile(file.path, {
