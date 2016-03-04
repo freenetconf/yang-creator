@@ -434,6 +434,9 @@ app.post("/yang_validate/:output?", function(req, res) {
 			var data = {
 				"error": stderr
 			}
+			if (error && error.code === "ENOENT")
+				data.error = "pyang could not be found"
+
 			output && (data.yang = stdout)
 			response(res, (error && error.killed) ? error : '', data)
 

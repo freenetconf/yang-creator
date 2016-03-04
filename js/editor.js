@@ -304,7 +304,7 @@ $("#d_options").on('click', '#a_export', function(e) {
 		loading(0)
 
 		if (!response || !response.yang)
-			return show_alert('yang generation failed')
+			return show_alert('yang generation failed: ' + response.error)
 
 		var yang_module_name = get_full_yang_name(yang_root)
 
