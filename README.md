@@ -19,7 +19,7 @@ You also need to have `pyang` installed for export to work. E.g.:
 Open browser url 'http://127.0.0.1:8888'
 
 To register/login enter wanted 'username' and 'password'.
-This gives you ability to manage your yang files.
+This gives you ability to manage your YANG files.
 
 If you have module that imports another module, you need to create/import all
 depended module and save them. After that you can use your module.
@@ -31,13 +31,13 @@ Manage existing files which are saved to your account.
 Create new example module/submodule.
 
 ##### Validate
-Validate your yang module using pyang.
+Validate your YANG module using pyang.
 
 ##### Export
-See your finalized yang module which you can download or copy (copy requieres flash).
+See your finalized YANG module which you can download or copy (copy requieres flash).
 
 ##### Save
-Save your yang files online for later usage.
+Save your YANG files online for later usage.
 
 #### TODO
 * statements:
@@ -46,7 +46,6 @@ Save your yang files online for later usage.
   * default values and possible values - some statements can only have specific values
   * extension statements - dynamically created statements are not supported
 * help: create help window for users where they can see how to use YANG Creator
-* import/include: yang extension statements defined in other modules are not seen
-* import: depends on yang parser work
+* import/include: YANG extension statements defined in other modules are not seen
+* import: depends on YANG parser work
 * security, code cleanup and consolidation
-
