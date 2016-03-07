@@ -12,6 +12,10 @@ var pyang_import_path = __dirname + "/ietf-yangs/"
 var express = require('express')
 var bodyParser = require('body-parser')
 var fs = require('fs')
+var nodemailer = require('nodemailer')
+var config = require('./config')
+
+var transporter = nodemailer.createTransport(config.mail_options)
 
 var validator = require('validator')
 var exec = require('child_process').execFile
@@ -52,6 +56,10 @@ new compressor.minify({
 	}
 })
 
+console.log("preparing config")
+var tmpConfFileName = __dirname + '/public_config.js.tmp'
+fs.writeFileSync(tmpConfFileName, 'var public_config = { "export_to_email": ' + config.export_to_email + ' }')
+
 new compressor.minify({
 	type: 'uglifyjs',
 	fileIn: [
@@ -64,10 +72,12 @@ new compressor.minify({
 		__dirname + '/js/jquery.form.min.js',
 		__dirname + '/js/main.js',
 		__dirname + '/js/yang.js',
+		tmpConfFileName,
 		__dirname + '/js/editor.js'
 	],
 	fileOut: __dirname + '/public/main.js',
 	callback: function(error, _m) {
+		fs.unlinkSync(tmpConfFileName)
 		if (error) throw error
 
 		console.log('js minified')
@@ -443,6 +453,54 @@ app.post("/yang_validate/:output?", function(req, res) {
 			/* overwrite current yang file with validated */
 			write_file(dir_name, file_name, stdout.replace(/^\s*$/gm, ''))
 		})
+	})
+})
+
+
+
+
+app.post("/email/:module_name", function(req, res) {
+	var userpass_hash = req.body.userpass_hash
+	var email = req.body.email
+	var yang_module_name = req.params.module_name
+	logging('sending yang module: ' + yang_module_name)
+
+	if (!user_is_valid(email, userpass_hash))
+		return response(res, "invalid username or password")
+
+	if (!identifier_valid(yang_module_name))
+		return response(res, "invalid YANG module name")
+
+	if (!config.export_to_email) {
+		var data = {
+			"error": "export to email is not enabled"
+		}
+		return response(res, '', data)
+	}
+
+	var dir_name = get_dir_name(email, userpass_hash)
+	var file_path = dir_name + yang_module_name
+
+	var yang_module_body = fs.readFileSync(file_path)
+	console.log(yang_module_body)
+
+	var mailOpts = {
+		from: config.mail_options.from,
+		to: email,
+		subject: yang_module_name,
+		text: yang_module_body
+	}
+
+	transporter.sendMail(mailOpts, function(error, info) {
+		var data = {
+			"error": error
+		}
+		if (!error) {
+			data.data = {
+				"info": "Yang module sent"
+			}
+		}
+		response(res, error, data)
 	})
 })
 

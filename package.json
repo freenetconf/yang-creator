@@ -33,6 +33,7 @@
 		"yang-parser" : "0.1.0",
 		"validator" : "5.1.0",
 		"rimraf" : "2.5.2",
-		"adm-zip": "0.4.7"
+		"adm-zip": "0.4.7",
+		"nodemailer": "2.3.0"
 	}
 }

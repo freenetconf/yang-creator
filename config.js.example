@@ -1,0 +1,16 @@
+var config = {}
+
+module.exports = config
+
+config.export_to_email = true
+
+config.mail_options = {
+	//"from": '"YANG" <yang@freenetconf.org>', // not working with gmail
+
+	// For more options see https://github.com/nodemailer/nodemailer#set-up-smtp
+	"service": "gmail",
+	"auth": {
+		"user": "user@gmail.com",
+		"pass": "secret"
+	}
+}

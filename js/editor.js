@@ -13,6 +13,8 @@
 
 /* main yang statement root */
 var yang_root = create_statement("module")
+//var config = require('../../config.js')
+console.log(public_config)
 
 $(function() {
 	$("#d_editor").html(create_dom_statement(yang_root))
@@ -310,12 +312,19 @@ $("#d_options").on('click', '#a_export', function(e) {
 
 		var file_url = '/file/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name
 
-		var h = $('<a href="' + file_url + '" class="btn btn-primary btn-xs">' + '<span id="download" class="glyphicon glyphicon-download"></span> ' + 'Download</a>' +
+		var modal_footer = '<a href="' + file_url + '" class="btn btn-primary btn-xs">' + '<span id="download" class="glyphicon glyphicon-download"></span> ' + 'Download</a>' +
 			'<button id="bt_copy_to_clipboard" class="btn btn-primary btn-xs" data-clipboard-target="modal-body" title="requires flash plugin">' +
 			'<span class="glyphicon glyphicon-transfer"></span> ' +
 			'Copy to clipboard' +
 			'</button>'
-		)
+		if (public_config.export_to_email) {
+			modal_footer += '<button id="bt_send_to_email" class="btn btn-primary btn-xs" data-yang-module-name="' + yang_module_name + '">' +
+					'<span class="glyphicon glyphicon-envelope"></span>' +
+					'&nbsp;Send to email ' + '(' + user_data.email + ')' +
+				'</button>'
+		}
+
+		var h = $(modal_footer)
 
 		show_modal(yang_module_name, '<pre>' + response.yang + '</pre>', h)
 
@@ -340,6 +349,31 @@ $("#d_options").on('click', '#a_export', function(e) {
 
 	}, true)
 
+})
+$('html').on('click', '#bt_send_to_email', function(e) {
+	e.preventDefault()
+
+	var user_data = get_userdata()
+	if (!user_data)
+		return show_alert("Please login to be able to use advanced features")
+
+	console.log(user_data)
+	console.log($(e.target).data('yang-module-name'))
+
+	var yang_name = $(e.target).data('yang-module-name')
+
+	if (!yang_name)
+		return show_alert("Invalid YANG module name.")
+
+	loading(1)
+	send_yang(yang_name, user_data).then(function(data) {
+		loading(0)
+		show_alert("YANG module successfully sent")
+	}, function(error) {
+		loading(0)
+		show_alert("Error sending YANG module: " + error)
+		console.log(error)
+	})
 })
 
 /*
@@ -669,6 +703,38 @@ function generate_yang(user_data, callback, output) {
 		error: function(error) {
 			return show_alert(error)
 		}
+	})
+}
+
+function send_yang(yang_module_name, user_data) {
+	return new Promise(function(resolve, reject) {
+		if (!user_data)
+			return show_alert("Please login to be able to use advanced features")
+
+		if (!yang_module_name)
+			return console.error("no module")
+
+		$.ajax({
+			type: 'POST',
+			url: '/email/' + yang_module_name,
+			dataType: 'json',
+			data: {
+				"userpass_hash": user_data.pass,
+				"email": user_data.email
+			},
+			success: function(response) {
+				if (response.error)
+					return reject(response.error)
+
+				if (response.data.error) {
+					return reject(remove_server_path(response.data.error))
+				}
+				return resolve(response.data)
+			},
+			error: function(error) {
+				return reject(error)
+			}
+		})
 	})
 }
 
