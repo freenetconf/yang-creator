@@ -47,179 +47,61 @@ $("#d_options").on("click", ".new-module a", function(e) {
 	document.getElementById("i_clear_scroll").parentNode.style['overflow-y'] = 'auto'
 })
 
+var generate_yang_modules_table = function(modules) {
+	var h = '<table class="files"><tr><th>Name</th><th>Actions</th></tr>'
+
+	var len = modules.length
+	for (var i = 0; i < len; i++) {
+		var yang_file = modules[i]
+		h += "<tr>"
+		h += '<td data-module-name><span>' + yang_file + '</span></td>'
+		h += '<td>'
+		h += '	<button class="btn btn-default btn-xs btn-edit-yang-model" data-model-name="' + yang_file + '">'
+		h += '		<span class="glyphicon glyphicon-ok"></span> Edit</button>'
+		h += '  <button class="btn btn-danger btn-xs btn-remove-yang-model" data-model-name="' + yang_file + '">'
+		h += '  	<span class="glyphicon glyphicon-remove"></span> Remove</button>'
+		h += '<td>'
+		h += "</tr>"
+	}
+
+	h += "</table>"
+	return $(h)
+}
+
 /*
  * show user yang files saved on server
  */
-
 $("#d_options").on("click", "#a_files", function() {
 	var user_data = get_userdata()
 	if (!user_data)
 		return show_alert("Please login to be able to use advanced features")
 
 	loading(1)
+	Yang.get_all(user_data).then(function(modules) {
+		loading(0)
 
+		if (!modules.length) {
+			return show_alert("No files saved yet")
+		}
 
-	$.getJSON('/yang/' + user_data.email + "/" + user_data.pass,
-		function(response) {
-			loading(0)
+		$modal_body = generate_yang_modules_table(modules)
+		var link = "/backup/" + user_data.email + "/" + user_data.pass
 
-			if (!response || response.error || !response.data || !Array.isArray(response.data))
-				return console.error(response)
+		var modal_footer  = '<form id="form_download" method="get" action="' + link + '">' +
+			'<button type="submit" id="i_confirm_backup" class="btn btn-primary btn-xs">' +
+			'<span class="glyphicon glyphicon-download"></span>Download</button>' +
+			'</form>' +
+			'<button id="i_reset_button" class="btn btn-danger btn-xs">' +
+			'<span class="glyphicon glyphicon-trash"></span>Reset YANG database</button>'
 
-			if (!response.data.length) {
-				return show_modal("YANG modules", $("<span>No files saved yet</span>"))
-			}
+		$modal_footer = $(modal_footer)
 
-			var h = '<table class="files"><tr><th>Name</th><th>Actions</th></tr>'
-
-			for (var i = 0, len = response.data.length; i < len; i++) {
-				var yang_file = response.data[i]
-				h += "<tr>"
-				h += '<td data-module-name><span>' + yang_file + '</span></td>'
-				h += '<td>\
-			<button class="btn btn-default btn-xs"><span class="glyphicon glyphicon-ok"></span> Edit</button> \
-			<button class="btn btn-danger btn-xs"><span class="glyphicon glyphicon-remove"></span> Remove</button>'
-				h += '<td>'
-				h += "</tr>"
-			}
-
-			var link = "/backup/" + user_data.email + "/" + user_data.pass
-
-			var x = '<form id="form_download" method="get" action="' + link + '">' +
-				'<button type="submit" id="i_confirm_backup" class="btn btn-primary btn-xs">' +
-				'<span class="glyphicon glyphicon-download"></span>Download</button>' +
-				'</form>'
-
-			var f = x + '<button id="i_reset_button" class="btn btn-danger btn-xs">' +
-				'<span class="glyphicon glyphicon-trash"></span>Reset YANG database</button>'
-
-			h += "</table>"
-
-			$h = $(h)
-			$f = $(f)
-
-
-			show_modal("YANG modules", $h, $f)
-
-			$h.on('click', '.btn-default', function(e) {
-				var self = $(this)
-
-				var yang_module_name = self.closest('tr').find('[data-module-name]').text().trim()
-
-				$.getJSON('/yang/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name,
-					function(response) {
-						if (!response || response.error || !response.data)
-							return show_alert("unable to fetch server data")
-
-						try {
-							var yang_data = JSON.parse(response.data)
-
-							yang_root = new yang.statement(yang_data.kw, yang_data.arg)
-							convert_to_structure(yang_data, yang_root)
-
-							$("#d_editor").html(create_dom_statement(yang_root))
-							hide_modal()
-						} catch (e) {
-							return show_alert(e)
-						}
-					})
-			})
-
-			$h.on('click', '.btn-danger', function() {
-				var self = $(this)
-					// if (!confirm("This can't be reverted. Are you sure?"))
-					// 	return
-
-				var yang_module_name = self.closest('tr').find('[data-module-name]').text().trim()
-
-				var warning = '<div id="remove_warning">' + "This can not be reverted. Are you sure you want to remove?" + '</div>'
-
-				var x = '<button id="i_confirm_remove" class="btn btn-danger btn-xs" align="left">\
-				<span class="glyphicon glyphicon-trash"></span>Remove YANG model</button>'
-
-				$w = $(warning)
-				$x = $(x)
-					//$f = $(f)
-
-
-
-				show_modal("Remove YANG model <i>" + yang_module_name + '</i>', $w, $x)
-				document.getElementById("remove_warning").parentNode.style['overflow-y'] = 'auto'
-
-				$('#d_modal').on('hidden.bs.modal', function() {
-					if (document.getElementById('remove_warning')) {
-						document.getElementById("d_options").childNodes[1].childNodes[1].click()
-					}
-				})
-
-				$('#i_confirm_remove').on('click', function() {
-					$.ajax({
-						type: 'DELETE',
-						url: '/yang/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name,
-						dataType: 'json',
-						success: function(result) {
-							//hide_modal()
-							document.getElementById("d_options").childNodes[1].childNodes[1].click()
-							if (!result.error) {
-								var $tr = self.closest('tr')
-								var $table = $tr.closest('table')
-								if ($table.find('tr').length == 2) {
-									$table.remove()
-									hide_modal()
-								} else {
-									$tr.remove()
-								}
-							}
-						},
-						error: function(error) {
-							console.error(error)
-						}
-					})
-				})
-
-
-			})
-
-
-			$('#i_reset_button').on('click', function() {
-				var warning = '<div id="reset_warning">This action will remove all your YANG models \
-				and restore to default. This action can not be reverted. Are you sure?</div>'
-				var link = "/backup/" + user_data.email + "/" + user_data.pass
-
-				var x = '<form id="form_download" method="get" action="' + link + '">' +
-					'<button type="submit" id="i_confirm_backup" class="btn btn-primary btn-xs">' +
-					'<span class="glyphicon glyphicon-download"></span>Download</button>' +
-					'</form>' +
-					'<button id="i_confirm_reset" class="btn btn-danger btn-xs">' +
-					'<span class="glyphicon glyphicon-trash"></span>Reset YANG database</button>'
-
-
-				$w = $(warning)
-				$x = $(x)
-					//$f = $(f)
-
-				show_modal("Reset YANG database", $w, $x)
-				document.getElementById("reset_warning").parentNode.style['overflow-y'] = 'auto'
-
-				$('#i_confirm_reset').on('click', function() {
-					$.ajax({
-						type: 'GET',
-						url: '/yang/reset/' + user_data.email + "/" + user_data.pass,
-						dataType: 'json',
-						success: function(result) {
-							hide_modal()
-						},
-						error: function(error) {
-							console.error(error)
-						}
-					})
-
-				})
-
-			})
-
-		})
-
+		show_modal("YANG modules", $modal_body, $modal_footer)
+	}, function(error) {
+		loading(0)
+		show_alert(error.error)
+		console.error(error)
+	})
 })
 
 /*
@@ -282,16 +164,19 @@ $("#d_options").on("click", "#a_validate", function() {
 
 	$d_validation.html("")
 	loading(1)
-	generate_yang(user_data, function(response) {
-		$d_validation.html(response.error ? response.error : "YANG module is valid.")
+	generate_yang(false).then(function(response) {
 		loading(0)
+		console.log(response)
+		$d_validation.html(response.error ? response.error : "YANG module is valid.")
+	}, function(error) {
+		show_alert(error)
 	})
 
 	return false
 })
 
 /*
- * epxport yang content to new window
+ * export yang content to new window
  */
 
 $("#d_options").on('click', '#a_export', function(e) {
@@ -302,13 +187,13 @@ $("#d_options").on('click', '#a_export', function(e) {
 		return show_alert("Please login to be able to use advanced features")
 
 	loading(1)
-	generate_yang(user_data, function(response) {
+	generate_yang(true).then(function(response) {
 		loading(0)
 
 		if (!response || !response.yang)
 			return show_alert('yang generation failed: ' + response.error)
 
-		var yang_module_name = get_full_yang_name(yang_root)
+		var yang_module_name = yang_root.get_full_name()
 
 		var file_url = '/file/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name
 
@@ -317,6 +202,7 @@ $("#d_options").on('click', '#a_export', function(e) {
 			'<span class="glyphicon glyphicon-transfer"></span> ' +
 			'Copy to clipboard' +
 			'</button>'
+
 		if (public_config.export_to_email) {
 			modal_footer += '<button id="bt_send_to_email" class="btn btn-primary btn-xs" data-yang-module-name="' + yang_module_name + '">' +
 					'<span class="glyphicon glyphicon-envelope"></span>' +
@@ -347,9 +233,11 @@ $("#d_options").on('click', '#a_export', function(e) {
 			ZeroClipboard.destroy()
 		})
 
-	}, true)
-
+	}, function(error) {
+		show_alert(error)
+	})
 })
+
 $('html').on('click', '#bt_send_to_email', function(e) {
 	e.preventDefault()
 
@@ -360,15 +248,10 @@ $('html').on('click', '#bt_send_to_email', function(e) {
 	console.log(user_data)
 	console.log($(e.target).data('yang-module-name'))
 
-	var yang_name = $(e.target).data('yang-module-name')
-
-	if (!yang_name)
-		return show_alert("Invalid YANG module name.")
-
 	loading(1)
-	send_yang(yang_name, user_data).then(function(data) {
+	yang_root.send_to_email(user_data).then(function(data) {
 		loading(0)
-		show_alert("YANG module successfully sent")
+		show_success("YANG module successfully sent")
 	}, function(error) {
 		loading(0)
 		show_alert("Error sending YANG module: " + error)
@@ -379,13 +262,12 @@ $('html').on('click', '#bt_send_to_email', function(e) {
 /*
  * save yang file to server
  */
-
 $("#d_options").on("click", "#a_save", function() {
 	var user_data = get_userdata()
 	if (!user_data)
 		return show_alert("Please login to be able to use advanced features")
 
-	var yang_module_name = get_full_yang_name(yang_root)
+	var yang_module_name = yang_root.get_full_name()
 	if (!yang_module_name)
 		return show_alert("No existing module")
 
@@ -394,28 +276,13 @@ $("#d_options").on("click", "#a_save", function() {
 		return console.error("no module content")
 
 	loading(1)
-	$.ajax({
-		type: 'PUT',
-		url: '/yang/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name,
-		data: {
-			"yang_module_content": yang_module_content
-		},
-		success: function(response) {
-			loading(0)
-
-			if (response.error)
-				return show_alert(response.error)
-
-			show_success('YANG model saved')
-		},
-		error: function(error) {
-			loading(0)
-
-			if (response.error)
-				return show_alert(error)
-		}
+	yang_root.save(user_data, yang_module_content).then(function(response) {
+		loading(0)
+		show_success("YANG model saved")
+	}, function(error) {
+		loading(0)
+		show_alert(error)
 	})
-
 	return false
 })
 
@@ -426,7 +293,7 @@ $("#d_options").on("click", "#a_download", function(e) {
 	if (!user_data)
 		return show_alert("Please login to be able to use advanced features")
 
-	var yang_module_name = get_full_yang_name(yang_root)
+	var yang_module_name = yang_root.get_full_name()
 	if (!yang_module_name)
 		return show_alert("No existing module")
 
@@ -451,7 +318,7 @@ $("#d_options").on("click", "#bt_import", function() {
 			try {
 				var yang_data = JSON.parse(response.responseJSON.data)
 				yang_root = new yang.statement(yang_data.kw, yang_data.arg)
-				convert_to_structure(yang_data, yang_root)
+				Yang.convert_to_structure(yang_data, yang_root)
 
 				$("#d_editor").html(create_dom_statement(yang_root))
 
@@ -667,75 +534,21 @@ $("#d_editor").on("blur", "[contenteditable]", function() {
  * @callback: called when yang is validate with response from server
  * @output: do we want server to reply us back generated yang content
  */
-
-function generate_yang(user_data, callback, output) {
-	if (!callback)
-		return console.error("generate yang: no callback")
+function generate_yang(output) {
+	var user_data = get_userdata()
 
 	if (!user_data)
 		return show_alert("Please login to be able to use advanced features")
 
-	var yang_module_name = get_full_yang_name(yang_root)
+	var yang_module_name = yang_root.get_full_name()
 	if (!yang_module_name)
 		return console.error("no module")
 
 	var yang_module_content = html_entity_decode(get_yang_from_dom($("#d_editor"), true))
 
-	$.ajax({
-		type: 'POST',
-		url: '/yang_validate/' + (output ? output : ''),
-		dataType: 'json',
-		data: {
-			"userpass_hash": user_data.pass,
-			"email": user_data.email,
-			"yang_module_name": yang_module_name,
-			"yang_module_content": yang_module_content
-		},
-		success: function(response) {
-			if (response.error)
-				return show_alert(response.error)
+	console.log(yang_root)
 
-			if (response.data.error) {
-				response.data.error = remove_server_path(response.data.error)
-			}
-			callback(response.data)
-		},
-		error: function(error) {
-			return show_alert(error)
-		}
-	})
-}
-
-function send_yang(yang_module_name, user_data) {
-	return new Promise(function(resolve, reject) {
-		if (!user_data)
-			return show_alert("Please login to be able to use advanced features")
-
-		if (!yang_module_name)
-			return console.error("no module")
-
-		$.ajax({
-			type: 'POST',
-			url: '/email/' + yang_module_name,
-			dataType: 'json',
-			data: {
-				"userpass_hash": user_data.pass,
-				"email": user_data.email
-			},
-			success: function(response) {
-				if (response.error)
-					return reject(response.error)
-
-				if (response.data.error) {
-					return reject(remove_server_path(response.data.error))
-				}
-				return resolve(response.data)
-			},
-			error: function(error) {
-				return reject(error)
-			}
-		})
-	})
+	return yang_root.validate(yang_module_content, user_data, output)
 }
 
 function remove_completion_window() {
@@ -897,29 +710,6 @@ function get_yang_from_dom(elem, pretty) {
 	return yang_string
 }
 
-function remove_server_path(str) {
-	return str.replace(/\/[A-z0-9]+.\/[A-z0-9]+\//gi, '')
-}
-
-function get_full_yang_name(yang_root) {
-	var yang_module_name = yang_root.nameval
-
-	if (!yang_module_name)
-		return 0
-
-	for (var i = 0, len = yang_root.subs.length; i < len; i++) {
-		var submodule = yang_root.subs[i]
-		if (submodule.type == "revision") {
-			yang_module_name += "@" + submodule.nameval
-			break
-		}
-	}
-
-	yang_module_name += ".yang"
-
-	return yang_module_name
-}
-
 function create_statement(statement) {
 	statement = statement || "module"
 
@@ -945,12 +735,97 @@ function create_statement(statement) {
 }
 
 /*
- * convert parsed yang data to our structure
+ * yangs list bindings
  */
-function convert_to_structure(yang_data, yang_root) {
-	for (var i = 0, len = yang_data.substmts.length; i < len; i++) {
-		var substatement = yang_data.substmts[i]
-		var e = yang_root.add(substatement.kw, htmlentities(substatement.arg))
-		convert_to_structure(substatement, e)
-	}
-}
+
+// active in yang files list
+$('html').on('click', '.btn-edit-yang-model', function(e) {
+	var self = $(this)
+	var user_data = get_userdata()
+
+	var yang_module_name = $(e.target).data('model-name')
+
+	Yang.get_module(yang_module_name, user_data).then(function(statement){
+		yang_root = statement
+
+		$("#d_editor").html(create_dom_statement(yang_root))
+		hide_modal()
+	}, function(error) {
+		show_alert(error)
+	})
+})
+
+// active in yang files list
+$('html').on('click', '.btn-remove-yang-model', function(e) {
+	var self = $(this)
+
+	var yang_module_name = $(e.target).data('model-name')
+
+	var warning = '<div id="remove_warning">' + "This can not be reverted. Are you sure you want to remove?" + '</div>'
+
+	var x = '<button id="i_confirm_remove" class="btn btn-danger btn-xs" align="left">\
+	<span class="glyphicon glyphicon-trash"></span>Remove YANG model</button>'
+
+	$w = $(warning)
+	$x = $(x)
+
+	show_modal("Remove YANG model <i>" + yang_module_name + '</i>', $w, $x)
+	document.getElementById("remove_warning").parentNode.style['overflow-y'] = 'auto'
+
+	$('#d_modal').on('hidden.bs.modal', function() {
+		if (document.getElementById('remove_warning')) {
+			document.getElementById("d_options").childNodes[1].childNodes[1].click()
+		}
+	})
+
+	$('#i_confirm_remove').on('click', function() {
+		var user_data = get_userdata()
+		yang_root.delete(user_data).then(function(result) {
+			console.log(result)
+			show_success('Yang model "' + yang_module_name + '" removed.')
+			document.getElementById("d_options").childNodes[1].childNodes[1].click()
+			var $tr = self.closest('tr')
+			var $table = $tr.closest('table')
+			if ($table.find('tr').length == 2) {
+				$table.remove()
+				hide_modal()
+			} else {
+				$tr.remove()
+			}
+		}, function(error) {
+			console.log('error')
+		})
+	})
+})
+
+$('html').on('click', '#i_reset_button', function() {
+	var warning = '<div id="reset_warning">This action will remove all your YANG models \
+	and restore to default. This action can not be reverted. Are you sure?</div>'
+	var user_data = get_userdata()
+
+	var link = "/backup/" + user_data.email + "/" + user_data.pass
+
+	var x = '<form id="form_download" method="get" action="' + link + '">' +
+		'<button type="submit" id="i_confirm_backup" class="btn btn-primary btn-xs">' +
+		'<span class="glyphicon glyphicon-download"></span>Download</button>' +
+		'</form>' +
+		'<button id="i_confirm_reset" class="btn btn-danger btn-xs">' +
+		'<span class="glyphicon glyphicon-trash"></span>Reset YANG database</button>'
+
+
+	$w = $(warning)
+	$x = $(x)
+		//$f = $(f)
+
+	show_modal("Reset YANG database", $w, $x)
+	document.getElementById("reset_warning").parentNode.style['overflow-y'] = 'auto'
+
+	$('#i_confirm_reset').on('click', function() {
+		Yang.reset_database(user_data).then(function(response) {
+			hide_modal()
+		}, function(error) {
+			console.log(error)
+			show_alert(error)
+		})
+	})
+})

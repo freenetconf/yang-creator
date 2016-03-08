@@ -1,4 +1,4 @@
-var yang = new function()
+var Yang = function()
 {
 	// global id counter for modules
 	this._ID = 1
@@ -106,6 +106,123 @@ var yang = new function()
 			return
 
 		this.subs.splice(to_index, 0, this.subs.splice(from_index, 1)[0])
+	}
+
+	statement.prototype.get_full_name = function() {
+		var yang_module_name = this.nameval
+
+		if (!yang_module_name)
+			return 0
+
+		for (var i = 0, len = this.subs.length; i < len; i++) {
+			var submodule = this.subs[i]
+			if (submodule.type == "revision") {
+				yang_module_name += "@" + submodule.nameval
+				break
+			}
+		}
+
+		yang_module_name += ".yang"
+
+		return yang_module_name
+	}
+
+	statement.prototype.delete = function(user_data) {
+		var yang_module_name = this.get_full_name()
+
+		return new Promise(function(resolve, reject){
+			return $.ajax({
+				type: 'DELETE',
+				url: '/yang/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name,
+				dataType: 'json'
+			}).then(function(result) {
+				console.log(result)
+				if (result.error) {
+					return reject(result)
+				}
+				return resolve(result)
+			}, reject)
+		})
+	}
+
+	statement.prototype.save = function(user_data, yang_module_content) {
+		var yang_module_name = this.get_full_name()
+		if (!yang_module_name)
+			return Promise.reject("No module")
+
+		return new Promise(function(resolve, reject) {
+			$.ajax({
+				type: 'PUT',
+				url: '/yang/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name,
+				data: {
+					"yang_module_content": yang_module_content
+				}
+			}).then(function(response) {
+				if (response.error) {
+					return reject(response.error)
+				}
+				resolve(response)
+			}, reject)
+		})
+	}
+
+	statement.prototype.send_to_email = function(user_data) {
+		var yang_module_name = this.get_full_name()
+		if (!yang_module_name)
+			return Promise.reject("No module")
+
+		return new Promise(function(resolve, reject) {
+			$.ajax({
+				type: 'POST',
+				url: '/email/' + yang_module_name,
+				dataType: 'json',
+				data: {
+					"userpass_hash": user_data.pass,
+					"email": user_data.email
+				},
+			}).then(function(response) {
+				if (response.error)
+					return reject(response.error)
+
+				if (response.data.error) {
+					return reject(remove_server_path(response.data.error))
+				}
+				return resolve(response.data)
+			}, reject)
+		})
+	}
+
+	statement.prototype.validate = function(yang_module_content, user_data, output) {
+		var yang_module_name = this.get_full_name()
+		if (!yang_module_name)
+			return Promise.reject("No module")
+
+		if (output == null) {
+			output = false
+		}
+
+		return new Promise(function(resolve, reject) {
+			$.ajax({
+				type: 'POST',
+				url: '/yang_validate/' + output,
+				dataType: 'json',
+				data: {
+					"userpass_hash": user_data.pass,
+					"email": user_data.email,
+					"yang_module_name": yang_module_name,
+					"yang_module_content": yang_module_content
+				},
+			}).then(function(response) {
+				if (response.error)
+					return reject(response.error)
+
+				if (response.data.error) {
+					response.data.error = remove_server_path(response.data.error)
+					return reject(response.data.error)
+				}
+				return resolve(response.data)
+			}, reject)
+		})
 	}
 
 	var statements = this.statements =
@@ -1051,6 +1168,57 @@ var yang = new function()
 		}
 
 	}
-
 }
 
+var yang = new Yang()
+
+Yang.get_all = function(user_data) {
+	return new Promise(function(resolve, reject) {
+		$.getJSON('/yang/' + user_data.email + "/" + user_data.pass).then(function(response) {
+			if (!response || response.error || !response.data || !Array.isArray(response.data)) {
+				return reject(response)
+			}
+			return resolve(response.data)
+		}, reject)
+	})
+}
+
+/*
+ * convert parsed yang data to our structure
+ */
+Yang.convert_to_structure = function(yang_data, yang_root) {
+	for (var i = 0, len = yang_data.substmts.length; i < len; i++) {
+		var substatement = yang_data.substmts[i]
+		var e = yang_root.add(substatement.kw, htmlentities(substatement.arg))
+		Yang.convert_to_structure(substatement, e)
+	}
+}
+
+Yang.get_module = function(yang_module_name, user_data) {
+	var yang_path = '/yang/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name
+
+	return new Promise(function(resolve, reject) {
+		$.getJSON(yang_path).then(function(response) {
+			if (!response || response.error || !response.data)
+				return reject("unable to fetch server data")
+
+			try {
+				var yang_data = JSON.parse(response.data)
+				var statement = new yang.statement(yang_data.kw, yang_data.arg)
+				Yang.convert_to_structure(yang_data, statement)
+
+				return resolve(statement)
+			} catch (e) {
+				return reject(e)
+			}
+		}, reject)
+	})
+}
+
+Yang.reset_database = function(user_data) {
+	return $.ajax({
+		type: 'GET',
+		url: '/yang/reset/' + user_data.email + "/" + user_data.pass,
+		dataType: 'json'
+	})
+}

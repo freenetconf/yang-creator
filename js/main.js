@@ -34,30 +34,40 @@ $(function() {
 	}
 	set_login_welcome()
 
-	$("#f_login").submit(function() {
+	var do_login = function(email, pass) {
+		if (!validateEmail(email))
+			return Promise.reject("Invalid email")
+
+		if (pass.length < 6)
+			return Promise.reject("Password is too short")
+
+		var pass_hash = Sha256.hash(pass)
+
+		return $.ajax({
+			type: 'POST',
+			url: '/register/' + email + "/" + pass_hash,
+			dataType: 'json',
+			success: function(result) {
+				$.jStorage.set('yanger_pass_hash', pass_hash)
+				$.jStorage.set('yanger_email', email)
+				set_login_welcome()
+			}
+		})
+	}
+
+	var do_logout = function() {}
+
+	$("#f_login").submit(function(e) {
+		e.preventDefault()
 		var self = $(this)
 		var user_pass = self.find("#i_userpass").val().trim()
-		var user_pass_hash = Sha256.hash(user_pass)
 		var email = self.find("#i_email").val().trim()
 
-		if (!validateEmail(email))
-			return show_alert("Invalid email")
-
-		if (user_pass.length < 6)
-			return show_alert("Password is too short")
-
-		$.ajax({
-			type: 'POST',
-			url: '/register/' + email + "/" + user_pass_hash,
-			dataType: 'json'
+		do_login(email, user_pass).then(function(data) {
+			show_alert("Welcome, " + email + '!')
+		}, function(error) {
+			show_alert(error)
 		})
-
-		$.jStorage.set('yanger_pass_hash', user_pass_hash)
-		$.jStorage.set('yanger_email', email)
-
-		set_login_welcome()
-
-		return false
 	})
 
 	$("#d_welcome").on("click", "#a_logout", function() {
@@ -374,4 +384,8 @@ function nl2br(str) {
 
 function br2nl(str) {
 	return str.replace(/<br\s*[\/]?>/gi, "\n")
+}
+
+function remove_server_path(str) {
+	return str.replace(/\/[A-z0-9]+.\/[A-z0-9]+\//gi, '')
 }
