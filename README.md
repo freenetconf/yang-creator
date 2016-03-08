@@ -9,6 +9,11 @@ The online YANG creator, editor, and exporter.
 	export PYTHON=python2 # in case you python is in fact python3
     npm install
 
+Copy `config.js.example` to `config.js` and edit as needed if you want to send
+YANG models via email as well.
+
+Run
+
     ./server.js
 
 You also need to have `pyang` installed for export to work. E.g.:
@@ -34,7 +39,7 @@ Create new example module/submodule.
 Validate your YANG module using pyang.
 
 ##### Export
-See your finalized YANG module which you can download or copy (copy requieres flash).
+See your finalized YANG module which you can download, copy (copy requieres flash) or send to email.
 
 ##### Save
 Save your YANG files online for later usage.
