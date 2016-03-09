@@ -13,9 +13,6 @@ var express = require('express')
 var bodyParser = require('body-parser')
 var fs = require('fs')
 var nodemailer = require('nodemailer')
-var config = require('./config')
-
-var transporter = nodemailer.createTransport(config.mail_options)
 
 var validator = require('validator')
 var exec = require('child_process').execFile
@@ -57,6 +54,18 @@ new compressor.minify({
 })
 
 console.log("preparing config")
+
+try {
+	fs.statSync('./config.js')
+}
+catch (e) {
+	console.log('config.js not found. creating it')
+	fs.createReadStream('config.js.example').pipe(fs.createWriteStream('config.js'))
+}
+
+var config = require('./config')
+var transporter = nodemailer.createTransport(config.mail_options)
+
 var tmpConfFileName = __dirname + '/public_config.js.tmp'
 fs.writeFileSync(tmpConfFileName, 'var public_config = { "export_to_email": ' + config.export_to_email + ' }')
 
