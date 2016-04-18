@@ -13,9 +13,6 @@ var express = require('express')
 var bodyParser = require('body-parser')
 var fs = require('fs')
 var nodemailer = require('nodemailer')
-var config = require('./config')
-
-var transporter = nodemailer.createTransport(config.mail_options)
 
 var validator = require('validator')
 var exec = require('child_process').execFile
@@ -25,6 +22,9 @@ var multer = require('multer')
 var upload = multer({dest: './uploads/'})
 
 var yang_parser = require('yang-parser')
+
+var YangFactory = require('./yang')
+YangFactory.setup(leveldb_dir)
 
 var logging = function (action, user) {
 	console.log(action, user, new Date())
@@ -57,6 +57,18 @@ new compressor.minify({
 })
 
 console.log("preparing config")
+
+try {
+	fs.statSync('./config.js')
+}
+catch (e) {
+	console.log('config.js not found. creating it')
+	fs.createReadStream('config.js.example').pipe(fs.createWriteStream('config.js'))
+}
+
+var config = require('./config')
+var transporter = nodemailer.createTransport(config.mail_options)
+
 var tmpConfFileName = __dirname + '/public_config.js.tmp'
 fs.writeFileSync(tmpConfFileName, 'var public_config = { "export_to_email": ' + config.export_to_email + ' }')
 
@@ -103,6 +115,13 @@ var response = function(res, error, data) {
 }
 
 /*
+ * function that we use to get 'uniq' user id
+ */
+function uniq_n(email, userpass_hash) {
+	return email + "_" + userpass_hash
+}
+
+/*
  * validate username, password (SHA256 hash)
  *
  * @username - username of the user
@@ -118,14 +137,6 @@ function user_is_valid(email, userpass_hash) {
 	}
 
 	return true
-}
-
-/*
- * function that we use to get 'uniq' user id
- */
-
-function uniq_n(email, userpass_hash) {
-	return email + "_" + userpass_hash
 }
 
 /*
@@ -161,57 +172,19 @@ function get_dir_name(email, userpass_hash) {
 
 var rmdir = require('rimraf')
 
-var initial_yang_load = function(email, userpass_hash, res) {
-	var db = levelup(leveldb_dir + uniq_n(email, userpass_hash), function(error, db) {
-		if (error) {
-			console.error("unable to save YANG module to database for user:%s", email)
-			console.error(error)
-
-			return response(res, error.toString())
-		}
-
-		var dir = "./ietf-yangs"
-		fs.readdir(dir, function(err, files) {
-			if (err) {
-				console.error("can't read default yang dir")
-				return response(res, err.toString())
-			}
-			files.forEach(function(yang_module_name) {
-				fs.readFile(dir + '/' + yang_module_name, 'utf-8', function(err, yang_module_content) {
-					if (err) {
-						console.log("can't read default yang file", yang_module_name, err)
-					}
-					db.put(yang_module_name, yang_module_content, function(error) {
-						db.close()
-
-						if (error) {
-							console.error("unable to save yang module to database for user:%s", email)
-							console.error(error)
-						}
-					})
-				})
-			})
-			response(res)
-		})
-
-
-	})
-}
-
-
 var AdmZip = require('adm-zip')
 
 app.post('/register/:email/:userpass_hash', function(req, res) {
 	var userpass_hash = req.params.userpass_hash
 	var email = req.params.email
-	var key = uniq_n(email, userpass_hash)
 
-	fs.exists(leveldb_dir + uniq_n(email, userpass_hash), function(exists) {
-		if (!exists) {
-			initial_yang_load(email, userpass_hash, res)
-		} else {
-			response(res)
-		}
+	var Yang = YangFactory.createYang(email, userpass_hash)
+
+	Yang.register().then(function() {
+		response(res)
+	}, function(error) {
+		console.error(error)
+		response(res)
 	})
 })
 
@@ -247,15 +220,15 @@ app.get("/backup/:email/:userpass_hash", function(req, res) {
 app.get("/yang/reset/:email/:userpass_hash", function(req, res) {
 	var userpass_hash = req.params.userpass_hash
 	var email = req.params.email
+	var Yang = YangFactory.createYang(email, userpass_hash)
 
 	logging('reseting users yang database', email)
 
-	rmdir('./db/' + uniq_n(email, userpass_hash), function(err) {
-		if (err) {
-			console.log(err);
-			return response(res, err.toString())
-		}
-		initial_yang_load(email, userpass_hash, res)
+	Yang.reset_db().then(function() {
+		response(res)
+	}, function(error) {
+		console.error(error)
+		response(res)
 	})
 })
 
@@ -268,34 +241,27 @@ app.put("/yang/:email/:userpass_hash/:yang_module_name", function(req, res) {
 	if (!user_is_valid(email, userpass_hash))
 		return response(res, "invalid username or password")
 
-	if (!identifier_valid(yang_module_name))
-		return response(res, "invalid YANG module name")
+	var Yang = YangFactory.createYang(email, userpass_hash)
 
-	if (!yang_module_content || yang_module_content.length < 10)
-		return response(res, "invalid YANG module content")
+	Yang.update(yang_module_name, yang_module_content).then(function() {
+		return response(res)
+	}, function(error) {
+		return response(res, error.toString())
+	})
+})
 
-	logging("saving yang module: " + yang_module_name, email)
+/*
+ * get all yang models for user
+ */
 
-	var db = levelup(leveldb_dir + uniq_n(email, userpass_hash), function(error, db) {
-		if (error) {
-			console.error("unable to save yang module to database for user:%s", email)
-			console.error(error)
-
-			return response(res, error.toString())
-		}
-
-		db.put(yang_module_name, yang_module_content, function(error) {
-			db.close()
-
-			if (error) {
-				console.error("unable to save yang module to database for user:%s", email)
-				console.error(error)
-
-				return response(res, error.toString())
-			}
-
-			return response(res)
-		})
+app.get("/yang/:email/:userpass_hash", function(req, res) {
+	var userpass_hash = req.params.userpass_hash
+	var email = req.params.email
+	var Yang = YangFactory.createYang(email, userpass_hash)
+	Yang.all_names().then(function(names) {
+		response(res, null, names)
+	}, function(error) {
+		response(res, error, error)
 	})
 })
 
@@ -303,7 +269,7 @@ app.put("/yang/:email/:userpass_hash/:yang_module_name", function(req, res) {
  * get yang module content from database for user
  */
 
-app.get("/yang/:email/:userpass_hash/:yang_module_name?", function(req, res) {
+app.get("/yang/:email/:userpass_hash/:yang_module_name", function(req, res) {
 	var userpass_hash = req.params.userpass_hash
 	var email = req.params.email
 	var yang_module_name = req.params.yang_module_name
@@ -311,55 +277,13 @@ app.get("/yang/:email/:userpass_hash/:yang_module_name?", function(req, res) {
 	if (!user_is_valid(email, userpass_hash))
 		return response(res, "invalid username or password")
 
-	var db = levelup(leveldb_dir + uniq_n(email, userpass_hash), function(error, db) {
-		if (error) {
-			console.error("unable to get YANG module from database for user:%s", email)
-			console.error(error)
+	var Yang = YangFactory.createYang(email, userpass_hash)
 
-			return response(res, error.toString())
-		}
-
-		if (yang_module_name) {
-			db.get(yang_module_name, function(error, value) {
-				db.close()
-
-				if (error) {
-					console.error("unable to get yang module from database for user:%s", email)
-					console.error(error)
-
-					return response(res, error.toString())
-				}
-
-				try {
-					response(res, null, JSON.stringify(yang_parser.parse(value)))
-				} catch (e) {
-					return response(res, e)
-				}
-			})
-		} else {
-			var keys = []
-
-			db.createReadStream({
-					values: false
-				})
-				.on('data', function(key) {
-					keys.push(key)
-				})
-				.on('error', function(error) {
-					console.error("database error when reading yang files for user: %s", email)
-					console.error(error)
-
-					db.close()
-				})
-				.on('end', function() {
-					response(res, null, keys)
-				})
-				.on('close', function() {
-					db.close()
-				})
-		}
+	Yang.find(yang_module_name).then(function(yang_module) {
+		response(res, null, JSON.stringify(yang_module))
+	}, function(error) {
+		response(res, error.toString())
 	})
-
 })
 
 /*
@@ -374,29 +298,11 @@ app.delete("/yang/:email/:userpass_hash/:yang_module_name", function(req, res) {
 	if (!user_is_valid(email, userpass_hash))
 		return response(res, "invalid username or password")
 
-	if (!identifier_valid(yang_module_name))
-		return response(res, "invalid YANG module name")
-
-	var db = levelup(leveldb_dir + uniq_n(email, userpass_hash), function(error, db) {
-		if (error) {
-			console.error("database error when deleting yang files for user: %s", email)
-			console.error(error)
-
-			return response(res, error.toString())
-		}
-
-		db.del(yang_module_name, function(error) {
-			db.close()
-
-			if (error) {
-				console.error("database error when deleting yang files for user: %s", email)
-				console.error(error)
-
-				return response(res, error.toString())
-			}
-
-			response(res)
-		})
+	var Yang = YangFactory.createYang(email, userpass_hash)
+	Yang.delete(yang_module_name).then(function() {
+		return response(res)
+	}, function(error) {
+		return response(error.toString())
 	})
 })
 
@@ -455,9 +361,6 @@ app.post("/yang_validate/:output?", function(req, res) {
 		})
 	})
 })
-
-
-
 
 app.post("/email/:module_name", function(req, res) {
 	var userpass_hash = req.body.userpass_hash
