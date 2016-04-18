@@ -127,24 +127,6 @@ var Yang = function()
 		return yang_module_name
 	}
 
-	statement.prototype.delete = function(user_data) {
-		var yang_module_name = this.get_full_name()
-
-		return new Promise(function(resolve, reject){
-			return $.ajax({
-				type: 'DELETE',
-				url: '/yang/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name,
-				dataType: 'json'
-			}).then(function(result) {
-				console.log(result)
-				if (result.error) {
-					return reject(result)
-				}
-				return resolve(result)
-			}, reject)
-		})
-	}
-
 	statement.prototype.save = function(user_data, yang_module_content) {
 		var yang_module_name = this.get_full_name()
 		if (!yang_module_name)
@@ -1179,6 +1161,22 @@ Yang.get_all = function(user_data) {
 				return reject(response)
 			}
 			return resolve(response.data)
+		}, reject)
+	})
+}
+
+Yang.delete = function(yang_module_name, user_data) {
+	return new Promise(function(resolve, reject){
+		return $.ajax({
+			type: 'DELETE',
+			url: '/yang/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name,
+			dataType: 'json'
+		}).then(function(result) {
+			console.log(result)
+			if (result.error) {
+				return reject(result)
+			}
+			return resolve(result)
 		}, reject)
 	})
 }

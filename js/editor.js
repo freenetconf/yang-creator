@@ -780,7 +780,7 @@ $('html').on('click', '.btn-remove-yang-model', function(e) {
 
 	$('#i_confirm_remove').on('click', function() {
 		var user_data = get_userdata()
-		yang_root.delete(user_data).then(function(result) {
+		Yang.delete(yang_module_name, user_data).then(function(result) {
 			console.log(result)
 			show_success('Yang model "' + yang_module_name + '" removed.')
 			document.getElementById("d_options").childNodes[1].childNodes[1].click()
