@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// generate code in /tmp folder
+var home_f = '/tmp/'
 var args = process.argv.slice(2)
 
 var port = args[0] || 8888
@@ -20,6 +22,8 @@ var compressor = require('node-minify')
 var compress = require('compression')
 var multer = require('multer')
 var upload = multer({dest: './uploads/'})
+
+var fse = require('fs-extra')
 
 var yang_parser = require('yang-parser')
 
@@ -266,7 +270,7 @@ app.get("/yang/:email/:userpass_hash", function(req, res) {
 })
 
 /*
- * get yang module content from database for user
+  get yang module content from database for user
  */
 
 app.get("/yang/:email/:userpass_hash/:yang_module_name", function(req, res) {
@@ -344,21 +348,33 @@ app.post("/yang_validate/:output?", function(req, res) {
 			return response(res, error)
 		}
 
-		exec('pyang', ['-f', 'yang', '-p', pyang_import_path, file_name], {
-			cwd: dir_name
-		}, function(error, stdout, stderr) {
-			var data = {
-				"error": stderr
-			}
-			if (error && error.code === "ENOENT")
-				data.error = "pyang could not be found"
+		console.log(yang_module_content)
+		function a() {
+			var error;
+			console.log("start");
+			var yang = require("libyang")
+			yang.ly_verb(yang.LY_LLWRN);
 
-			output && (data.yang = stdout)
-			response(res, (error && error.killed) ? error : '', data)
+			var ctx = yang.ly_ctx_new(pyang_import_path);
+			var module = yang.lys_parse_mem(ctx, yang_module_content, yang.LYS_IN_YANG);
+			error =  yang.ly_errmsg();
 
-			/* overwrite current yang file with validated */
-			write_file(dir_name, file_name, stdout.replace(/^\s*$/gm, ''))
-		})
+			yang.ly_ctx_destroy(ctx)
+			return error
+		}
+
+		error = a()
+		console.log(error)
+
+		var data = {
+			"error": error
+		}
+
+		response(res, (error && error.killed) ? error : '', data)
+
+		/* overwrite current yang file with validated */
+		//write_file(dir_name, file_name, stdout.replace(/^\s*$/gm, ''))
+
 	})
 })
 
@@ -441,6 +457,223 @@ app.get("/file/:email/:userpass_hash/:yang_module_name?", function(req, res) {
 		}
 	})
 })
+
+/*
+ * generate source code
+ */
+
+function copy_yang_files(yang_dir, userpass_hash, email,key, callback) {
+	var buffer = []
+	var j=0
+
+	var db = levelup(leveldb_dir + uniq_n(email, userpass_hash), function(error, db) {
+		if (error) {
+			logging('unable create yin files from database', email)
+			return
+		}
+		db.createReadStream().on('data', function(entry) {
+			var path = yang_dir + entry.key
+			j++
+			buffer[j] = new Buffer(entry.value);
+			var k = j
+			fs.open(path, 'w', function(err, fd) {
+			if (err) {
+				throw 'error opening file: ' + err;
+			} else {
+			fs.write(fd, buffer[k], 0, buffer[k].length, null, function(err) {
+				if (err) throw 'error writing file: ' + err;
+				fs.close(fd, function() {})
+				});
+			}
+			});
+		}).on('close', function() {
+			db.close()
+			callback()
+		})
+	})
+}
+
+app.get("/file/yang2src/:email/:userpass_hash/:yang_module_name?", function(req, res) {
+	var email = req.params.email
+	var userpass_hash = req.params.userpass_hash
+	var yang_module_name = req.params.yang_module_name
+	var key = uniq_n(email, userpass_hash)
+	var tmp_dir = home_f + email + userpass_hash
+	var gen_name = 'source_code'
+
+	if (!fs.existsSync(tmp_dir)) {
+		fs.mkdirSync(tmp_dir)
+	} else {
+		fse.removeSync(tmp_dir)
+		fs.mkdirSync(tmp_dir)
+	}
+
+	//var yang_name = yang_module_name.split('.yang')[0].split('@')[0].replace(/-/g,'_')
+	var yang_name = yang_module_name
+	fs.mkdirSync(tmp_dir + '/' + gen_name)
+	tmp_dir = tmp_dir + '/' + gen_name
+	fs.mkdirSync(tmp_dir + '/' + yang_name)
+	fs.mkdirSync(tmp_dir + '/ietf-yang')
+	fs.mkdirSync(tmp_dir + '/' + yang_name + '/yang')
+	fs.mkdirSync(tmp_dir + '/' + yang_name + '/src')
+
+	if (!user_is_valid(email, userpass_hash))
+		return response(res, "invalid username or password")
+
+	if (!identifier_valid(yang_module_name))
+		return response(res, "invalid YANG module name")
+
+	var dir_name = get_dir_name(email, userpass_hash)
+	var file_path = dir_name + yang_module_name
+
+	var myCallback = function() {
+
+		fs.readFile(file_path, "binary", function(error, file) {
+		if (error) {
+			res.writeHead(error.code === 'ENOENT' ? 404 : 500, {
+				"Content-Type": "text/plain"
+			})
+			res.write(error + "\n")
+			res.end()
+		} else {
+			fs.writeFileSync(tmp_dir + '/' + yang_name + '/yang/' + yang_module_name, file)
+			var yang2src = require('./yang2src/code_gen.js')
+
+			var myCallback_2 = function() {
+				var EasyZip = require('easy-zip').EasyZip;
+				var zip5 = new EasyZip();
+
+				zip5.zipFolder(tmp_dir, function(error, data){
+					if (error) {
+						res.writeHead(error.code === 'ENOENT' ? 404 : 500, {
+							"Content-Type": "text/plain"
+						})
+						res.write(error + "\n")
+						res.end()
+					} else {
+						zip5.writeToResponse(res, gen_name, function(error, data){
+							if (error) {
+								res.writeHead(error.code === 'ENOENT' ? 404 : 500, {
+									"Content-Type": "text/plain"
+								})
+								res.write(error + "\n")
+								res.end()
+							} else {
+								res.end()
+							}
+						});
+					}
+				})
+			}
+
+			try {
+				yang2src.generate(yang_module_name, "C", tmp_dir, myCallback_2)
+			} catch (e) {
+				// TODO, write a response
+				//return response(res, "invalid YIN model")
+				return
+			}
+
+			// delete generated files
+			if (fs.existsSync(tmp_dir)) {
+				fse.removeSync(tmp_dir)
+			}
+		}
+		})
+
+	}
+
+	copy_yang_files(tmp_dir + '/ietf-yang/', userpass_hash, email, key, myCallback)
+})
+
+app.get("/file/yang2src_all/:email/:userpass_hash/:yang_module_name?", function(req, res) {
+	var email = req.params.email
+	var userpass_hash = req.params.userpass_hash
+	var key = uniq_n(email, userpass_hash)
+	var tmp_dir = home_f + email + userpass_hash
+	var gen_name = 'source_code'
+
+	if (!fs.existsSync(tmp_dir)) {
+		fs.mkdirSync(tmp_dir)
+	} else {
+		fse.removeSync(tmp_dir)
+		fs.mkdirSync(tmp_dir)
+	}
+
+	fs.mkdirSync(tmp_dir + '/' + gen_name)
+	tmp_dir = tmp_dir + '/' + gen_name
+	fs.mkdirSync(tmp_dir + '/ietf-yang')
+
+	if (!user_is_valid(email, userpass_hash))
+		return response(res, "invalid username or password")
+
+	var dir_name = get_dir_name(email, userpass_hash)
+
+	var yang2src = require('./yang2src/code_gen.js')
+
+	var myCallback_2 = function() {
+		var EasyZip = require('easy-zip').EasyZip;
+		var zip5 = new EasyZip();
+
+		zip5.zipFolder(tmp_dir, function(error, data){
+			if (error) {
+				res.writeHead(error.code === 'ENOENT' ? 404 : 500, {
+					"Content-Type": "text/plain"
+				})
+				res.write(error + "\n")
+				res.end()
+			} else {
+				zip5.writeToResponse(res, gen_name, function(error, data){
+					if (error) {
+						res.writeHead(error.code === 'ENOENT' ? 404 : 500, {
+							"Content-Type": "text/plain"
+						})
+						res.write(error + "\n")
+						res.end()
+					} else {
+						res.end()
+					}
+				});
+			}
+		})
+	}
+
+
+	var myCallback = function() {
+		var yang = require("libyang")
+		var ctx = yang.ly_ctx_new(tmp_dir + "/ietf-yang");
+
+		try { var files = fs.readdirSync(tmp_dir + '/ietf-yang'); }
+		catch(e) { return; }
+		if (files.length > 0)
+		var totalCalls = files.length
+		for (var i = 0; i < files.length; i++) {
+			(function(i) {
+				var yang_file = tmp_dir + '/ietf-yang/' + files[i]
+				var module = yang.lys_parse_path(ctx, yang_file, yang.LYS_IN_YANG);
+			})(i);
+		}
+
+		yang.ly_ctx_destroy(ctx)
+
+		try {
+
+			yang2src.generate("/", "C", tmp_dir, myCallback_2)
+		} catch (e) {
+			// TODO, write a response
+			//return response(res, "invalid YIN model")
+			return
+		}
+
+		// delete generated files
+		if (fs.existsSync(tmp_dir)) {
+			fse.removeSync(tmp_dir)
+		}
+	}
+
+	copy_yang_files(tmp_dir + '/ietf-yang/', userpass_hash, email, key, myCallback)
+})
+
 
 /*
  * upload yang file

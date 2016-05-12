@@ -36,6 +36,8 @@
 		"adm-zip": "0.4.7",
 		"nodemailer": "2.3.0",
 		"promise": "7.1.1",
-		"mustache": "2.2.1"
+		"mustache": "2.2.1",
+		"fs-extra": "0.30.0",
+		"libyang": "1.0.9"
 	}
 }
