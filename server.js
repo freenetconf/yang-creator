@@ -348,10 +348,8 @@ app.post("/yang_validate/:output?", function(req, res) {
 			return response(res, error)
 		}
 
-		console.log(yang_module_content)
-		function a() {
+		function validate() {
 			var error;
-			console.log("start");
 			var yang = require("libyang")
 			yang.ly_verb(yang.LY_LLWRN);
 
@@ -363,18 +361,23 @@ app.post("/yang_validate/:output?", function(req, res) {
 			return error
 		}
 
-		error = a()
+		error = validate()
 		console.log(error)
 
 		var data = {
 			"error": error
 		}
 
+		output && (data.yang = yang_module_content)
+
 		response(res, (error && error.killed) ? error : '', data)
 
 		/* overwrite current yang file with validated */
 		//write_file(dir_name, file_name, stdout.replace(/^\s*$/gm, ''))
-
+		console.log("dir_name ->" + dir_name)
+		console.log("file_name ->" + file_name)
+		write_file(dir_name, file_name, yang_module_content)
+		return "true"
 	})
 })
 
@@ -512,10 +515,7 @@ app.get("/file/yang2src/:email/:userpass_hash/:yang_module_name?", function(req,
 	var yang_name = yang_module_name
 	fs.mkdirSync(tmp_dir + '/' + gen_name)
 	tmp_dir = tmp_dir + '/' + gen_name
-	fs.mkdirSync(tmp_dir + '/' + yang_name)
 	fs.mkdirSync(tmp_dir + '/ietf-yang')
-	fs.mkdirSync(tmp_dir + '/' + yang_name + '/yang')
-	fs.mkdirSync(tmp_dir + '/' + yang_name + '/src')
 
 	if (!user_is_valid(email, userpass_hash))
 		return response(res, "invalid username or password")
@@ -536,7 +536,7 @@ app.get("/file/yang2src/:email/:userpass_hash/:yang_module_name?", function(req,
 			res.write(error + "\n")
 			res.end()
 		} else {
-			fs.writeFileSync(tmp_dir + '/' + yang_name + '/yang/' + yang_module_name, file)
+			fs.writeFileSync(tmp_dir + '/ietf-yang/' + yang_module_name, file)
 			var yang2src = require('./yang2src/code_gen.js')
 
 			var myCallback_2 = function() {

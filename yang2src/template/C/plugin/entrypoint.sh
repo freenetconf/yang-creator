@@ -4,7 +4,7 @@
 if [ ! -d "build" ]; then
 	mkdir build
 	cd build
-	cmake ..
+	cmake  -DCMAKE_INSTALL_PREFIX:PATH=/usr/lib  ..
 	make -j2
 	cd ..
 
@@ -29,10 +29,12 @@ if [ ! -d "xml" ]; then
 	chown -R $APP_U:$APP_G *
 fi
 
+cd build
+make install
+cd ..
+
 /usr/bin/sysrepoctl --install --yang=yang/{{yang_name_full}} --search-dir ../ietf-yang
 /usr/bin/sysrepoctl --import=xml --module={{yang_name_short}} < xml/{{yang_name_full}}.data.xml
 
-/usr/bin/sysrepod
-/usr/bin/netopeer2-server
-
-./build/bin/{{yang_name_short}}
+/usr/bin/sysrepo-plugind
+/usr/bin/netopeer2-server -d
