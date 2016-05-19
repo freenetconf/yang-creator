@@ -374,8 +374,6 @@ app.post("/yang_validate/:output?", function(req, res) {
 
 		/* overwrite current yang file with validated */
 		//write_file(dir_name, file_name, stdout.replace(/^\s*$/gm, ''))
-		console.log("dir_name ->" + dir_name)
-		console.log("file_name ->" + file_name)
 		write_file(dir_name, file_name, yang_module_content)
 		return "true"
 	})

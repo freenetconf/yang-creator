@@ -9,7 +9,8 @@ var genObject = {
                              'FindSYSREPO.cmake': 'CMakeModules/FindSYSREPO.cmake',
                              'main.c': 'src/main.c',
                              'entrypoint.sh': 'entrypoint.sh',
-                             'run.sh': 'run.sh'
+                             'run.sh': 'run.sh',
+                             'README.md': 'README.md'
                          }
         }, {
             'plugin': {
@@ -17,7 +18,8 @@ var genObject = {
                         'FindSYSREPO.cmake': 'CMakeModules/FindSYSREPO.cmake',
                         'main.c': 'src/main.c',
                         'entrypoint.sh': 'entrypoint.sh',
-                        'run.sh': 'run.sh'
+                        'run.sh': 'run.sh',
+                        'README.md': 'README.md'
                       }
         }
     ]
