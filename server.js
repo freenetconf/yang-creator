@@ -358,11 +358,14 @@ app.post("/yang_validate/:output?", function(req, res) {
 			error =  yang.ly_errmsg();
 
 			yang.ly_ctx_destroy(ctx)
-			return error
+			// errmsg can have old logs, with (module == null) check success of parsing
+			if (module == null)
+				return error
+			else
+				return
 		}
 
 		error = validate()
-		console.log(error)
 
 		var data = {
 			"error": error
@@ -373,9 +376,7 @@ app.post("/yang_validate/:output?", function(req, res) {
 		response(res, (error && error.killed) ? error : '', data)
 
 		/* overwrite current yang file with validated */
-		//write_file(dir_name, file_name, stdout.replace(/^\s*$/gm, ''))
 		write_file(dir_name, file_name, yang_module_content)
-		return "true"
 	})
 })
 
