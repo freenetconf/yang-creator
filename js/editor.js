@@ -87,10 +87,18 @@ $("#d_options").on("click", "#a_files", function() {
 		$modal_body = generate_yang_modules_table(modules)
 		var link = "/backup/" + user_data.email + "/" + user_data.pass
 
+		var yang2src_url = '/file/yang2src_all/' + user_data.email + "/" + user_data.pass + "/" + "all"
+
+
+		var f = '<a href="' + yang2src_url + '" class="btn btn-primary btn-xs">' + '<span id="yang2src" class="glyphicon glyphicon-download"></span> ' + 'Export source code</a>' +
+			'<button id="i_reset_button" class="btn btn-danger btn-xs">' +
+			'<span class="glyphicon glyphicon-trash"></span>Reset YANG database</button>' +
+			'</form>'
+
 		var modal_footer  = '<form id="form_download" method="get" action="' + link + '">' +
 			'<button type="submit" id="i_confirm_backup" class="btn btn-primary btn-xs">' +
 			'<span class="glyphicon glyphicon-download"></span>Download</button>' +
-			'</form>' +
+			f +
 			'<button id="i_reset_button" class="btn btn-danger btn-xs">' +
 			'<span class="glyphicon glyphicon-trash"></span>Reset YANG database</button>'
 
@@ -196,8 +204,10 @@ $("#d_options").on('click', '#a_export', function(e) {
 		var yang_module_name = yang_root.get_full_name()
 
 		var file_url = '/file/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name
+		var yang2src_url = '/file/yang2src/' + user_data.email + "/" + user_data.pass + "/" + yang_module_name
 
 		var modal_footer = '<a href="' + file_url + '" class="btn btn-primary btn-xs">' + '<span id="download" class="glyphicon glyphicon-download"></span> ' + 'Download</a>' +
+			'<a href="' + yang2src_url + '" class="btn btn-primary btn-xs">' + '<span id="yang2src" class="glyphicon glyphicon-download"></span> ' + 'Export source code</a>' +
 			'<button id="bt_copy_to_clipboard" class="btn btn-primary btn-xs" data-clipboard-target="modal-body" title="requires flash plugin">' +
 			'<span class="glyphicon glyphicon-transfer"></span> ' +
 			'Copy to clipboard' +
