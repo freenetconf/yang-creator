@@ -44,7 +44,7 @@ sed -i "s/config.netconf.host = 'sysrepo'/config.netconf.host = 'new_name'/" ../
 
 Video demonstration via asciinema:
 
-https://asciinema.org/a/1nmwxhjgnn0ms3glsupp81apx
+https://asciinema.org/a/46549
 
 XPath is used for getting values. Learn more about XPath: +
 link:http://www.w3schools.com/xsl/xpath_intro.asp[] +
