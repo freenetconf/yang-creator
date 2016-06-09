@@ -16,6 +16,7 @@ fi
 # create skeleton xml file
 if [ ! -d "xml" ]; then
 	mkdir xml
+	apt-get update
 	apt-get install libxml2-utils
 
 	pyang -p ../ietf-yang --sample-xml-skeleton-annotations --sample-xml-skeleton-defaults --sample-xml-skeleton-doctype=data yang/{{yang_name_full}} --format sample-xml-skeleton | xmllint --format - >  xml/{{yang_name_full}}.data.xml
