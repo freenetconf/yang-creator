@@ -10,7 +10,7 @@ var genObject = {
                              'main.c': 'src/main.c',
                              'entrypoint.sh': 'entrypoint.sh',
                              'run.sh': 'run.sh',
-                             'README.md': 'README.md'
+                             'README.asciidoc': 'README.asciidoc'
                          }
         }, {
             'plugin': {
@@ -19,7 +19,7 @@ var genObject = {
                         'main.c': 'src/main.c',
                         'entrypoint.sh': 'entrypoint.sh',
                         'run.sh': 'run.sh',
-                        'README.md': 'README.md'
+                        'README.asciidoc': 'README.asciidoc'
                       }
         }
     ]
